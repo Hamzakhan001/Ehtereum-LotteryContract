@@ -59,7 +59,7 @@ abstract contract  Raffle is VRFConsumerBaseV2,KeeperCompatibleInterface{
 		emit RaffleEnter(msg.sender);
 	}
 
-	function checkUpkeep(bytes calldata /* checkData */) public override 
+	function checkUpkeep(bytes memory /* checkData */) public view override 
 	returns (bool upKeepNeeded,bytes memory)
 	{
 		bool isOpen=(RaffleState.OPEN==s_raffleState);
@@ -69,21 +69,44 @@ abstract contract  Raffle is VRFConsumerBaseV2,KeeperCompatibleInterface{
 	   bool upKeepNeeded=(isOpen && timePassed && hasPlayer && hasBalance);
 	}
 
-	function performUpKeep(bytes calldata /*perform Data*/) external override{
-		(bool upKeepNeeded,)=checkUpkeep(" ");
-		if(!upKeepNeeded){
-			return Raffle_UpKeepNotNeeded(address(this).balance,s_players.length,uint256(s_raffleState));
-		}
-		s_raffleState=RaffleState.CALCULATING;
-		uint256 requestId=i_vrfCoordinator.requestRandomWords(
-			i_gasLane,
-			i_subscriptionid,
-			REQUEST_CONFIRMATIONS,
-			i_callbackGasLimit,
-			NUM_WORDS
-		);
-		emit RequestedRaffleWinner(requestId);
-	}
+	// function performUpKeep(bytes calldata /*perform Data*/) external override{
+	// 	(bool upKeepNeeded,)=checkUpkeep(" ");
+	// 	if(!upKeepNeeded){
+	// 		return Raffle_UpKeepNotNeeded(address(this).balance,s_players.length,uint256(s_raffleState));
+	// 	}
+	// 	s_raffleState=RaffleState.CALCULATING;
+	// 	uint256 requestId=i_vrfCoordinator.requestRandomWords(
+	// 		i_gasLane,
+	// 		i_subscriptionid,
+	// 		REQUEST_CONFIRMATIONS,
+	// 		i_callbackGasLimit,
+	// 		NUM_WORDS
+	// 	);
+	// 	emit RequestedRaffleWinner(requestId);
+	// }
+
+	 function performUpkeep(
+        bytes calldata /* performData */
+    ) external override {
+        (bool upkeepNeeded, ) = checkUpkeep("");
+        // require(upkeepNeeded, "Upkeep not needed");
+        if (!upkeepNeeded) {
+            revert Raffle_UpKeepNotNeeded(
+                address(this).balance,
+                s_players.length,
+                uint256(s_raffleState)
+            );
+        }
+        s_raffleState = RaffleState.CALCULATING;
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
+            i_gasLane,
+            i_subscriptionid,
+            REQUEST_CONFIRMATIONS,
+            i_callbackGasLimit,
+            NUM_WORDS
+        );
+        emit RequestedRaffleWinner(requestId);
+    }
 
 	function fulfillRandomWords(uint256,uint256[] memory randomWords) internal override
 	{
@@ -109,6 +132,14 @@ abstract contract  Raffle is VRFConsumerBaseV2,KeeperCompatibleInterface{
 
 	function getRecentWinner() public view returns(address){
 		return s_recentWinner;
+	}
+
+	function getRaffleState() public view returns (RaffleState){
+		return s_raffleState;
+	}
+
+	function getNumWords()public view returns(uint256){
+		return NUM_WORDS;
 	}
 
 }
